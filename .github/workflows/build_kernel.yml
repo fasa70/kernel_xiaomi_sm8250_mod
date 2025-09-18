@@ -39,10 +39,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整提交历史，便于 git rev-parse
+          fetch-depth: 0
 
       - name: Set build variables
-        id: vars
         run: |
           if [ "${{ github.event.inputs.kernelsu_enabled }}" = "Yes" ]; then
             echo "KSU_ARG=ksu" >> $GITHUB_ENV
@@ -65,7 +64,6 @@ jobs:
           cd $HOME/proton-clang
           wget https://github.com/kdrag0n/proton-clang/archive/refs/tags/20210522.zip
           unzip 20210522.zip
-          mv proton-clang-20210522 proton-clang-20210522
           cd -
 
       - name: Build Kernel
@@ -73,11 +71,10 @@ jobs:
           bash build.sh $DEVICE $KSU_ARG
 
       - name: Find output zip
-        id: find_zip
         run: |
           ZIP_FILE=$(ls -t *.zip | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
-            echo "❌ 没有找到生成的内核 ZIP 文件"
+            echo "❌ No ZIP generated"
             exit 1
           fi
           echo "zip_name=$ZIP_FILE" >> $GITHUB_ENV
