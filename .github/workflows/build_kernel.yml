@@ -7,6 +7,7 @@ on:
         description: 'Target device (目标设备)'
         required: true
         type: choice
+        default: 'pipa'
         options:
           - 'umi'
           - 'cmi'
@@ -36,12 +37,12 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout source
+      - name: 🧐 Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set build variables
+      - name: 🙌 Set build variables
         run: |
           if [ "${{ github.event.inputs.kernelsu_enabled }}" = "Yes" ]; then
             echo "KSU_ARG=ksu" >> $GITHUB_ENV
@@ -52,13 +53,13 @@ jobs:
           fi
           echo "DEVICE=${{ github.event.inputs.target_device }}" >> $GITHUB_ENV
 
-      - name: Install dependencies
+      - name: 🤖 Install dependencies
         run: |
           sudo apt update
           sudo apt install -y \
             build-essential git curl wget bison flex zip bc cpio libssl-dev ccache python-is-python3
 
-      - name: Download Proton Clang Toolchain
+      - name: ⬇️ Download Proton Clang Toolchain
         run: |
           mkdir -p $HOME/proton-clang
           cd $HOME/proton-clang
@@ -66,29 +67,29 @@ jobs:
           unzip 20210522.zip
           cd -
 
-      - name: Build Kernel
+      - name: 🔧 Build Kernel
         run: |
           bash build.sh $DEVICE $KSU_ARG
 
-      - name: Find output zip
-        run: |
-          ZIP_FILE=$(ls -t *.zip | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "❌ No ZIP generated"
-            exit 1
-          fi
-          echo "zip_name=$ZIP_FILE" >> $GITHUB_ENV
-
-      - name: Create GitHub Release
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: kernel_source/*.zip
+        
+      - name: 🚀 Release kernel zip
         uses: softprops/action-gh-release@v2
         with:
-          name: "Kernel Build - ${{ env.DEVICE }} - ${{ env.KSU_STR }}"
-          tag_name: "build-${{ env.DEVICE }}-${{ github.run_number }}"
+          tag_name: kernel-${{ github.run_id }}-${{ github.event.inputs.target_device }}
+          name: "Kernel Build ${{ github.run_id }} for ${{ github.event.inputs.target_device }}"
           body: |
-            **Target Device:** ${{ env.DEVICE }}
-            **KernelSU Enabled:** ${{ github.event.inputs.kernelsu_enabled }}
-            **Build Time:** $(date -u "+%Y-%m-%d %H:%M:%S UTC")
-            **Commit:** ${{ github.sha }}
-          files: ${{ env.zip_name }}
+            ## Information
+            - 设备: ${{ github.event.inputs.target_device }}
+            - KSU: ${{ github.event.inputs.kernelsu_enabled }}
+            - 构建ID: ${{ github.run_id }}
+
+            ## Install
+            - 下载内核安装包
+            - 使用 Kernel Flasher 等软件刷入 AK3 压缩包
+          files: kernel_source/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
