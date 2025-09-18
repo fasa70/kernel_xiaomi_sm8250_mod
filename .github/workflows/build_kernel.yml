@@ -1,0 +1,97 @@
+name: Build Android Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_device:
+        description: 'Target device (目标设备)'
+        required: true
+        type: choice
+        options:
+          - 'umi'
+          - 'cmi'
+          - 'cas'
+          - 'thyme'
+          - 'munch'
+          - 'dagu'
+          - 'elish'
+          - 'enuma'
+          - 'alioth'
+          - 'apollo'
+          - 'lmi'
+          - 'psyche'
+          - 'pipa'
+      kernelsu_enabled:
+        description: 'Enable KernelSU (是否启用 KernelSU)'
+        required: true
+        type: choice
+        default: 'Yes'
+        options:
+          - 'Yes'
+          - 'No'
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整提交历史，便于 git rev-parse
+
+      - name: Set build variables
+        id: vars
+        run: |
+          if [ "${{ github.event.inputs.kernelsu_enabled }}" = "Yes" ]; then
+            echo "KSU_ARG=ksu" >> $GITHUB_ENV
+            echo "KSU_STR=KernelSU" >> $GITHUB_ENV
+          else
+            echo "KSU_ARG=" >> $GITHUB_ENV
+            echo "KSU_STR=NoKSU" >> $GITHUB_ENV
+          fi
+          echo "DEVICE=${{ github.event.inputs.target_device }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential git curl wget bison flex zip bc cpio libssl-dev ccache python-is-python3
+
+      - name: Download Proton Clang Toolchain
+        run: |
+          mkdir -p $HOME/proton-clang
+          cd $HOME/proton-clang
+          wget https://github.com/kdrag0n/proton-clang/archive/refs/tags/20210522.zip
+          unzip 20210522.zip
+          mv proton-clang-20210522 proton-clang-20210522
+          cd -
+
+      - name: Build Kernel
+        run: |
+          bash build.sh $DEVICE $KSU_ARG
+
+      - name: Find output zip
+        id: find_zip
+        run: |
+          ZIP_FILE=$(ls -t *.zip | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "❌ 没有找到生成的内核 ZIP 文件"
+            exit 1
+          fi
+          echo "zip_name=$ZIP_FILE" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Kernel Build - ${{ env.DEVICE }} - ${{ env.KSU_STR }}"
+          tag_name: "build-${{ env.DEVICE }}-${{ github.run_number }}"
+          body: |
+            **Target Device:** ${{ env.DEVICE }}
+            **KernelSU Enabled:** ${{ github.event.inputs.kernelsu_enabled }}
+            **Build Time:** $(date -u "+%Y-%m-%d %H:%M:%S UTC")
+            **Commit:** ${{ github.sha }}
+          files: ${{ env.zip_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
