@@ -74,13 +74,14 @@ jobs:
       - name: 📤 Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: kernel_source/*.zip
+          name: kernel-build
+          path: ./*.zip
         
       - name: 🚀 Release kernel zip
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: kernel-${{ github.run_id }}-${{ github.event.inputs.target_device }}
-          name: "Kernel Build ${{ github.run_id }} for ${{ github.event.inputs.target_device }}"
+          tag_name: kernel-${{ github.event.inputs.target_device }}-${{ github.run_number }}
+          name: "Kernel Build ${{ github.run_number }} for ${{ github.event.inputs.target_device }}"
           body: |
             ## Information
             - 设备: ${{ github.event.inputs.target_device }}
@@ -89,7 +90,7 @@ jobs:
 
             ## Install
             - 下载内核安装包
-            - 使用 Kernel Flasher 等软件刷入 AK3 压缩包
-          files: kernel_source/*.zip
+            - 使用 Kernel Flasher 或 TWRP 等工具刷入 AnyKernel3 压缩包
+          files: ./*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
