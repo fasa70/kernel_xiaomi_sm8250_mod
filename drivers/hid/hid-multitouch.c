@@ -989,11 +989,11 @@ static int mt_process_slot(struct mt_device *td, struct input_dev *input,
 		return -EINVAL;
 
 	/* Xiaomi Touch: boost sensitivity by scaling coordinates 10x */
-	if (td->hdev->vendor == 0x15d9 && td->hdev->product == 0x00a1) {
-        if (*slot->x != *(DEFAULT_ZERO)) *slot->x *= 10;
-        if (*slot->y != *(DEFAULT_ZERO)) *slot->y *= 10;
-        if (*slot->cx != *(DEFAULT_ZERO)) *slot->cx *= 10;
-        if (*slot->cy != *(DEFAULT_ZERO)) *slot->cy *= 10;
+    if (td->hdev->vendor == 0x15d9 && td->hdev->product == 0x00a1) {
+        if (*slot->x != 0) *slot->x *= 10;
+        if (*slot->y != 0) *slot->y *= 10;
+        if (*slot->cx != 0) *slot->cx *= 10;
+        if (*slot->cy != 0) *slot->cy *= 10;
     }
 
 	if ((quirks & MT_QUIRK_CONTACT_CNT_ACCURATE) &&
