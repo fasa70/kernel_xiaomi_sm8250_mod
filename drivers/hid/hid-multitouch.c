@@ -988,6 +988,14 @@ static int mt_process_slot(struct mt_device *td, struct input_dev *input,
 	if (!slot)
 		return -EINVAL;
 
+	/* Xiaomi Touch: boost sensitivity by scaling coordinates 10x */
+	if (td->hdev->vendor == 0x15d9 && td->hdev->product == 0x00a1) {
+        if (*slot->x != *(DEFAULT_ZERO)) *slot->x *= 10;
+        if (*slot->y != *(DEFAULT_ZERO)) *slot->y *= 10;
+        if (*slot->cx != *(DEFAULT_ZERO)) *slot->cx *= 10;
+        if (*slot->cy != *(DEFAULT_ZERO)) *slot->cy *= 10;
+    }
+
 	if ((quirks & MT_QUIRK_CONTACT_CNT_ACCURATE) &&
 	    app->num_received >= app->num_expected)
 		return -EAGAIN;
@@ -1596,6 +1604,19 @@ static int mt_input_configured(struct hid_device *hdev, struct hid_input *hi)
 	if (suffix)
 		hi->input->name = devm_kasprintf(&hdev->dev, GFP_KERNEL,
 						 "%s %s", hdev->name, suffix);
+	/* Scale ABS limits 10x for Xiaomi Touch */
+    if (hdev->vendor == 0x15d9 && hdev->product == 0x00a1) {
+        struct input_dev *input = hi->input;
+        int x_max = input->absinfo[ABS_MT_POSITION_X].maximum;
+        int y_max = input->absinfo[ABS_MT_POSITION_Y].maximum;
+
+        if (x_max > 0 && y_max > 0) {
+            input_set_abs_params(input, ABS_MT_POSITION_X, 0, x_max * 10, 0, 0);
+            input_set_abs_params(input, ABS_MT_POSITION_Y, 0, y_max * 10, 0, 0);
+            input_set_abs_params(input, ABS_X, 0, x_max * 10, 0, 0);
+            input_set_abs_params(input, ABS_Y, 0, y_max * 10, 0, 0);
+        }
+    }
 
 	return 0;
 }
